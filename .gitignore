@@ -12,3 +12,6 @@ data/
 
 # macOS
 .DS_Store
+
+# airflow-init 이 생성하는 설정 — fernet_key·secret_key 가 들어 있음
+config/airflow.cfg
