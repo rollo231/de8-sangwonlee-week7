@@ -1,0 +1,58 @@
+# Q4 — Spark Standalone 클러스터 (master 1 + worker 2)
+#   기동: docker compose -f docker-compose.spark.yaml up -d
+#   UI  : http://localhost:8081  (8080 은 Airflow 가 사용 중)
+
+# 같은 폴더의 Airflow compose 와 프로젝트 이름이 겹치지 않게 분리
+# (겹치면 서로를 orphan 으로 보고 --remove-orphans 시 상대 컨테이너를 지운다)
+name: week7-spark
+
+x-spark-worker: &spark-worker
+  image: apache/spark:3.5.9-python3
+  command:
+    - /opt/spark/bin/spark-class
+    - org.apache.spark.deploy.worker.Worker
+    - spark://spark-master:7077
+  environment:
+    SPARK_WORKER_CORES: "1"
+    SPARK_WORKER_MEMORY: 2g
+  volumes:
+    - ./jobs:/opt/spark/jobs:ro
+    - ./data:/opt/spark/data:ro
+  depends_on:
+    - spark-master
+  networks:
+    - spark-net
+
+services:
+  spark-master:
+    image: apache/spark:3.5.9-python3
+    hostname: spark-master
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.master.Master
+      - --host
+      - spark-master
+      - --port
+      - "7077"
+      - --webui-port
+      - "8080"
+    ports:
+      - "8081:8080"  # master Web UI
+      - "7077:7077"  # 클러스터 접속 포트
+    volumes:
+      - ./jobs:/opt/spark/jobs:ro
+      - ./data:/opt/spark/data:ro
+    networks:
+      - spark-net
+
+  spark-worker-1:
+    <<: *spark-worker
+    hostname: spark-worker-1
+
+  spark-worker-2:
+    <<: *spark-worker
+    hostname: spark-worker-2
+
+networks:
+  spark-net:
+    name: spark-net
